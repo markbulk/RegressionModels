@@ -1,0 +1,70 @@
+---
+title: "The Effect of Automatic Transmissions on Automobile Mileage"
+author: "Mark Bulkeley"
+date: "April 17, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(ggplot2)
+```
+
+## Introduction
+
+Motor Trend has long been an interested observer of fuel efficiency and the trade-offs that go with it.  As such, we have pulled together a prototypical dataset to explore this topic that is available to the R community as "mtcars".  Using this dataset, this analysis will specifically seek to answer two key questions:
+
+* Is an automatic or manual transmission better for mileage (abbreviated through this paper as MPG, for miles per gallon)?
+* How can we Quantify the MPG difference between automatic and manual transmissions?
+
+This report will seek to answer both questions, but will first explore the data that is available.  For reproducibility, all of the code used to make our conclusions is included directly in this paper.  The original R-markdown file is also available on the web.
+
+## Exploratory Data Analysis
+
+Please see the help file (`?mtcars`) for a complete description of Motor Trend cars dataset.
+
+```{r cars}
+data(mtcars)                ## Load data
+mtc <- data.table(mtcars)   ## Use data.table for ease of use
+mtc[, am := factor(am, levels = c(0, 1))]
+```
+
+## Model Selection
+
+Ideally, we will identify a model that is parsimonious (simple as possible), while providing substantial explanatory power.  The approach that we will use is a nested model approach, where we will continue to add variables that, based on our ANOVA test, we have statistical rationale to add.  Given that MPG is a continuous variable, we will use a simple linear to try to estimate it.  The form of the model will be Y (the estimated MPG) = intercept + variable.
+
+First, we look at how the variables might be correlated to one another.  We will reject including two regressor variables that have higher than 90% correlation to each other.  To find them we will use the `R` command `cor` and remove the diagonals.  We don't include `mpg` in the matrix (dropped by adding the `[, -1]`).
+
+```{r correlated, echo=TRUE}
+setdiff(which((cor(mtcars[, -1]) < -0.9) | (cor(mtcars[, -1]) > 0.9)), seq(from=1, to=100, by = 11))
+```
+
+From the above answer, we see that the `cyl` and `disp` variables are strongly correlated.  We will have to take care in the inclusion of displacement when also including `cyl`.
+
+```{r anova_run, echo = TRUE}
+fit <- lm(mpg ~ cyl, data = mtcars)
+fit2 <- lm(mpg ~ disp, data = mtcars)
+fit3 <- lm(mpg ~ cyl + disp, data = mtcars)
+anova(fit, fit3)
+```
+
+Despite the model statistics being slightly favorable for the inclusion of `cyl` (cylindars), we are going to favor the displacement variable (`disp`) given the continuous nature and high range.  From here, we will sort the variables in the order of expected importance to gas mileage and build a series of nested fits to test with `anova`.  Note that we will include whether or not a car is an automatic up front, given we want to explore the impact of the particular variable, for sure.  In our judgement, displacement will be most important, followed by horsepower, weight, number of forward gears, 1/4 mile time, number of carburetors, rear axel ratio and finally whether the engine is in a "V" or straight configuration.  Thus, we have:
+
+```{r model_run, echo = TRUE}
+fit1 <- lm(mpg ~ am, data = mtcars)
+fit2 <- lm(mpg ~ am + disp, data = mtcars)
+fit3 <- lm(mpg ~ am + disp + hp, data = mtcars)
+fit4 <- lm(mpg ~ am + disp + hp + wt, data = mtcars)
+fit5 <- lm(mpg ~ am + disp + hp + wt + gear, data = mtcars)
+fit6 <- lm(mpg ~ am + disp + hp + wt + gear + qsec, data = mtcars)
+fit7 <- lm(mpg ~ am + disp + hp + wt + gear + qsec + carb, data = mtcars)
+fit8 <- lm(mpg ~ am + disp + hp + wt + gear + qsec + carb + drat, data = mtcars)
+fit9 <- lm(mpg ~ am + disp + hp + wt + gear + qsec + carb + drat + vs, data = mtcars)
+anova(fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8, fit9)
+```
+
+From here, we are going to 
+
+
+## Is an Automatic Better for Mileage?
